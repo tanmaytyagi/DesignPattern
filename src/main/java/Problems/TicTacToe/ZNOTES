@@ -1,0 +1,79 @@
+#1 : Clarifying Requirements :
+------------------------------
+
+1. Should the game support variable board sizes, such as 4x4 or 5x5 ?
+    - No stick with 3x3
+
+2. Should the game support both player-vs-player and player-vs-computer modes ?
+    - player-vs-player only
+
+3. What should happen if a player tries selecting an already filled cell?
+    - reject the move and inform the player
+
+4. Should the system maintain a scoreboard across multiple games to track player wins?
+    - Yes, tracking score would be great addition
+
+5. Should we track the history of moves to allow features like undo or move replay?
+    - Interesting feature but leave it
+
+
+Functional Requirements :
+-------------------------
+
+- The game is played on a 3x3 grid.
+- Two players take alternate turns, identified by markers ‘X’ and ‘O’
+- The game should detect and announce the winner.
+- The game should declare a draw if all cells are filled and no player has won.
+- The game should reject invalid moves and inform the player.
+- The system should maintain a scoreboard across multiple games.
+
+
+Non-Functional Requirements :
+-----------------------------
+
+- The design should follow object-oriented principles with separation of concerns
+- The system should be extensible to future features like larger boards, AI opponent, move history, etc.
+- The system should provide clear console output that reflects the current state of the game board.
+
+
+
+#2 : Identifying Core Entities :
+--------------------------------
+
+enums :
+- Symbol        : 'X', 'O', '_'
+- GameStatus    : 'IN_PROGRESS', 'WINNER_X', 'WINNER_O', 'DRAW'
+
+Custom Exception :
+- InvalidMoveException : extends RuntimeException
+
+Data Classes :
+- Player : immutable
+- Cell : mutable
+
+Interfaces :
+- WinningStrategy : boolean checkWin(Board board, int row, int col, Symbol symbol);
+- GameObserver : void update(Game game);
+
+Strategy implementation :
+- RowWinningStrategy
+- ColumnWinningStrategy
+- DiagonalWinningStrategy
+
+Core Classes :
+- Board class : encapsulates all grid operations
+- Game class : The Game coordinates players, board, strategies, and observers
+
+Observer Class :
+- Scoreboard : listens for game end events and automatically updates scores
+
+Singleton Facade :
+- TicTacToeSystem : External code only needs to know about this class
+
+
+#3 CODE implementation :
+------------------------
+
+Now let's translate our design into working code. We'll build bottom-up:
+foundational types first, then data classes, then the classes with real logic.
+This order matters because each layer depends on the ones below it.
