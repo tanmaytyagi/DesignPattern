@@ -1,0 +1,87 @@
+Functional Requirements :
+-------------------------
+ - identify users by id, ip, or api key
+ - limit requests based on configurable rules
+ - return proper error headers and status codes (429 too many request)
+
+
+Non-functional Requirements :
+-----------------------------
+ - low latency check (< 10ms per request check)
+ - availability >> consistency (slight delays in limit enforcement across nodes are acceptable)
+ - scale to 1M requests/second across 100M daily active users.
+ - middleware should be very minimal
+
+
+Where does it fit ?
+-------------------
+
+1. Could be communicating to your proxy (LB, nginx, HA proxy) and saving API server
+2. API servers communicating directly with rate limiter
+
+
+Database thinking :
+-------------------
+
+- we require key value store
+- we require expiration of key
+- fast
+
+=> all boils down to "Redis"
+=> we will create a rate limiting "library" Not a "service" to avoid network hops
+
+and that code can reside over proxy or API server whatever we choose.
+
+
+Scaling rate limiter :
+----------------------
+- scaling rate limiter = scaling database (here)
+
+- if we can veritically scale it - perfect (if that handles our load)
+- if not then => horizontal scaling the redis
+
+- now we know the traffic will be "write" heavy on the redis as we are doing count++;
+- so we will shard the redis database instead of adding read replicas
+
+- since our write request would be key-value so its very easy for us to shard based on keys
+- and in that way there will be no cross shard queries
+
+hash = fn(userId) % n
+
+n = number of nodes of redis servers
+Here we are assuming : the rate limiter library will know the value of 'n'
+
+NOTE : Each Redis shard gets one or more read replicas that continuously synchronize with the master
+(This ensures high availability and fault tolerance)
+
+NOTE : Instead of establishing a new TCP connection to Redis for each rate limit check,
+your API gateways maintain a pool of persistent connections. (connection pooling)
+(for enabling low latency at high scale)
+
+
+
+Memory Calculations :
+---------------------
+
+key = userId = int = 4 bytes (if auth token or ip then 16 bytes)
+value = count = int = 4 bytes
+
+total = 20 bytes * 100 million user = 2 GB (that means storage is not a concern)
+
+so we are sharding not for storage but for the no. of request
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,57 @@
+Functional requirement :
+
+1. user can book a ticket
+2. user can view all events
+3. user can search for events
+
+add on's : view booked ticket, admin flows, dynamic pricing for popular events
+
+
+Non Functional requirement :
+
+1. high availability for searching & viewing events
+2. strong consistency for booking events (no double booking)
+3. scalable to handle high throughput (viral events)
+4. low latency for event searches (< 500ms)
+5. system is read heavy so should support very high read throughput
+
+
+Core entities :
+
+1. Event : name, date and time, type, performer or band.
+
+2. User : individual interacting with the system - userId
+
+3. Performer : performer name, description, link to their profile
+
+4. Venue : location, capacity, seat layout,
+
+5. Ticket : eventId, seat detail, pricing, status (available or sold)
+
+6. Booking : userId, List<Ticket>, total price, booking status (in process / confirmed)
+
+
+API :
+
+1. GET /events/:eventId -> Event & Venue & Performer & Ticket[]
+2. GET /events/search?keyword={keyword}&start={start_date}&end={end_date}&pageSize={page_size}&page={page_number} -> Event[]
+
+3. POST /booking/reserve header : sessionToken, body : ticketId
+4. POST /booking/confirm header : sessionToken, body : ticketId, paymentDetails
+
+
+High level design :
+-------------------
+
+Client  -------->   API Gateway  ----------> Event CRUD Service -----> Database (postgres)
+            (auth, rate limit, routing)
+
+Event : id, venueId, performerId, tickets[], name, description
+Venue : id, location, seatMap
+Ticket : id, eventId, seat, price, status, userId
+Performer : id
+
+
+- Redis TTL -> ticket locks and api data cache
+- Elastic search for word based search instead of like %word% queries (very slow)
+- CDN to most popular event data
