@@ -1,0 +1,122 @@
+## Ecommerce LLD Flow and Class Order
+
+### Goal
+Build a simple, modular ecommerce design that supports search, cart, order, inventory checks, and multiple payment gateways.
+
+### Design Flow (How It Works)
+1) Product browsing
+   - User searches by name or category using ProductCatalogService.
+   - Product details are read from ProductRepository.
+2) Cart operations
+   - User adds/removes items via CartService.
+   - Cart holds CartItem entries and can compute total.
+3) Order placement
+   - OrderService pulls cart items and builds a request map (productId -> qty).
+   - InventoryService validates and deducts stock atomically (reserveAndDeduct).
+4) Payment
+   - PaymentService routes to a specific PaymentGateway (stripe/paypal).
+   - Payment is assumed successful in this version.
+5) Order confirmation
+   - OrderService creates Order + OrderItem list.
+   - OrderRepository stores the order and cart is cleared.
+6) Order history
+   - User views past orders via OrderService.getOrdersForUser.
+
+### Recommended Class Writing Order
+Start with stable models, then repositories, then services, then demo wiring:
+
+1) **Enums / Value Objects**
+   - Category
+   - OrderStatus
+2) **Domain Models**
+   - Product
+   - CartItem, Cart
+   - OrderItem, Order
+3) **Repository Interfaces + In-Memory Implementations**
+   - ProductRepository, InMemoryProductRepository
+   - OrderRepository, InMemoryOrderRepository
+4) **Payment Abstraction**
+   - PaymentRequest, PaymentResult
+   - PaymentGateway interface
+   - StripeGateway, PayPalGateway
+5) **Services**
+   - ProductCatalogService (search/browse)
+   - CartService (cart ops)
+   - InventoryService (stock validation + deduction)
+   - PaymentService (gateway selection)
+   - OrderService (checkout + consistency)
+6) **Entry Point / Demo**
+   - EcommerceDemo (wire and run a sample flow)
+
+### Why This Order Works
+- Models are dependencies for everything else.
+- Repositories are simple and allow services to stay modular.
+- Payment is isolated so new gateways can be added without touching checkout.
+- OrderService sits last because it depends on cart, inventory, payment, and repo.
+## Battleship Approach and Class Order
+
+### Goal
+Build a minimal, clean OOP design with clear separation of concerns and easy extensibility for firing strategies.
+
+### Design Overview (How It Works)
+- `Battlefield` owns board size, side boundaries, ship placement validation, hit/miss resolution, and grid rendering.
+- `Player` owns ships and holds a firing strategy.
+- `Ship` is an immutable model that computes its occupied cells from a center coordinate.
+- `GameService` orchestrates the game lifecycle and prints output.
+- `FireStrategy` is an interface so strategies can be swapped without changing game logic.
+- `RandomFireStrategy` is the default implementation.
+
+### How the Game Is Played
+- The board is an NxN grid split vertically: PlayerA uses the left half, PlayerB uses the right half.
+- Both players place an equal number of square ships on their own half.
+- Players take turns firing a missile at a single coordinate on the opponent's half.
+- A hit destroys the entire ship; a miss switches the turn to the other player.
+- No coordinate can be targeted more than once across the whole game.
+- The game ends when all ships of one player are destroyed.
+
+### What the Inputs Mean
+- `initGame(N)`: `N` is the board size; must be even and > 0.
+- `addShip(id, size, xA, yA, xB, yB)`:
+  - `id`: unique ship identifier (used in output labels).
+  - `size`: side length of the square ship (e.g., size 2 occupies 2x2 cells).
+  - `xA, yA`: center coordinate of PlayerA's ship on the left half.
+  - `xB, yB`: center coordinate of PlayerB's ship on the right half.
+  - Coordinates are 0-based with (0,0) at the top-left.
+- `startGame()`: begins turns with PlayerA.
+- `viewBattleField()`: prints the full grid with occupied cells labeled.
+
+### Recommended Class Writing Order
+Start from simple models, then core logic, then orchestration:
+
+1) **Value Objects / Enums**
+   - `Coordinate`: immutable x,y pair with `equals`/`hashCode`.
+   - `Side`: enum for LEFT/RIGHT, with labels `A` and `B`.
+
+2) **Core Domain Models**
+   - `Ship`: immutable model; computes its occupied cells based on `size` and `center`.
+   - `Player`: holds ships, side, and firing strategy.
+
+3) **Core Game Logic**
+   - `Battlefield`: validates placement, stores occupancy, resolves hits, renders grid.
+
+4) **Strategy Abstraction**
+   - `FireStrategy`: interface that returns the next coordinate.
+   - `RandomFireStrategy`: default implementation (random valid target).
+
+5) **Game Orchestration**
+   - `GameService`: implements `initGame`, `addShip`, `startGame`, `viewBattleField`.
+
+6) **Entry Point**
+   - `Main`: shows sample usage.
+
+### Why This Order Works
+- Early classes are stable building blocks; later classes depend on them.
+- `Battlefield` only needs models, so it can be built before services.
+- Strategies are cleanly isolated, so they can be changed without touching `GameService`.
+
+### File Map
+- `model/Coordinate`, `model/Side`, `model/Ship`, `model/Player`
+- `model/Battlefield`
+- `strategy/FireStrategy`, `strategy/RandomFireStrategy`
+- `service/GameService`
+- `Main`
